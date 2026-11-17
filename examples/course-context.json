@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-16T23:54:56.519515+00:00",
+  "assignment_filters": {
+    "timezone": "Europe/Stockholm",
+    "days_ahead": 14,
+    "include_completed": false
+  },
+  "assignments": [
+    {
+      "id": 1,
+      "course_id": 101,
+      "name": "Matrix exercises",
+      "course": "Example: Linear Algebra",
+      "due_at": "2026-11-15T23:54:56.519515+00:00",
+      "due": "2026-11-16 00:54 CET",
+      "status": "unsubmitted",
+      "completed": false,
+      "group": "Overdue",
+      "points": 10,
+      "url": "https://example.com/assignments/1",
+      "description": "Review the lecture notes, practice, then check your answers."
+    },
+    {
+      "id": 2,
+      "course_id": 101,
+      "name": "Vector spaces",
+      "course": "Example: Linear Algebra",
+      "due_at": "2026-11-18T23:54:56.519515+00:00",
+      "due": "2026-11-19 00:54 CET",
+      "status": "unsubmitted",
+      "completed": false,
+      "group": "2026-11-19",
+      "points": 10,
+      "url": "https://example.com/assignments/2",
+      "description": "Review the lecture notes, practice, then check your answers."
+    },
+    {
+      "id": 3,
+      "course_id": 101,
+      "name": "Optional practice",
+      "course": "Example: Linear Algebra",
+      "due_at": null,
+      "due": "No due date",
+      "status": "unsubmitted",
+      "completed": false,
+      "group": "No due date",
+      "points": 10,
+      "url": "https://example.com/assignments/3",
+      "description": "Review the lecture notes, practice, then check your answers."
+    }
+  ],
+  "courses": [
+    {
+      "id": 101,
+      "name": "Example: Linear Algebra",
+      "course_code": "MATH101",
+      "url": "https://example.com/courses/101",
+      "description": "Vectors, matrices, and applications.",
+      "homepage": {
+        "type": "wiki",
+        "url": "https://example.com/courses/101",
+        "description": "The course homepage is the front page shown below."
+      },
+      "syllabus": {
+        "html": "<h2>Learning goals</h2><p>Explain vector spaces and solve linear systems.</p>",
+        "text": "Learning goals\n\nExplain vector spaces and solve linear systems.",
+        "links": []
+      },
+      "front_page": {
+        "id": 1,
+        "title": "Welcome to Linear Algebra",
+        "url": "https://example.com/courses/101/pages/welcome",
+        "updated_at": null,
+        "status": "available",
+        "lock_explanation": "",
+        "body": {
+          "html": "<p>Start with the weekly study guide.</p><p><a href=\"/courses/101/pages/week-1\">Week 1</a></p>",
+          "text": "Start with the weekly study guide.\n\nWeek 1",
+          "links": [
+            "https://example.com/courses/101/pages/week-1"
+          ]
+        }
+      },
+      "pages": [
+        {
+          "id": 2,
+          "title": "Week 1 study guide",
+          "url": "https://example.com/courses/101/pages/week-1",
+          "updated_at": null,
+          "status": "available",
+          "lock_explanation": "",
+          "body": {
+            "html": "<p>Read chapter 1 before the lecture.</p><p>Practice matrix multiplication.</p>",
+            "text": "Read chapter 1 before the lecture.\n\nPractice matrix multiplication.",
+            "links": []
+          }
+        }
+      ],
+      "modules": [
+        {
+          "id": 10,
+          "name": "Week 1",
+          "position": 1,
+          "state": "unlocked",
+          "unlock_at": null,
+          "prerequisite_module_ids": [],
+          "items": [
+            {
+              "id": 20,
+              "title": "Week 1 study guide",
+              "type": "Page",
+              "position": null,
+              "url": "https://example.com/courses/101/pages/week-1",
+              "external_url": "",
+              "content_id": null,
+              "page_url": "week-1",
+              "completion_requirement": null
+            }
+          ]
+        }
+      ],
+      "activity_stream": [],
+      "warnings": []
+    }
+  ]
+}

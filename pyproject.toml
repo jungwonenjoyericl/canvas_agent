@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "canvas-study-agent"
+version = "0.1.0"
+description = "Turn Canvas LMS assignments into a personal study plan."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["tzdata>=2024.1; sys_platform == 'win32'"]
+
+[project.optional-dependencies]
+dev = ["ruff>=0.11,<1"]
+
+[project.scripts]
+canvas-study = "canvas_agent.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["canvas_agent*"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B", "UP"]
