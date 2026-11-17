@@ -6,6 +6,8 @@ JSON export for tools such as Codex. Runs on **Windows, macOS, and Linux** with
 
 - Group assignments by deadline, including overdue and undated work.
 - Export course homepages, syllabus, pages, modules, and source links.
+- Optionally extract text from linked PDFs and PowerPoint (`.pptx`) files.
+- Compare exports to spot new assignments, changed deadlines, and updated material.
 - Customize the assignment layout and choose which courses to include.
 - Preview the workflow offline with sample data.
 
@@ -146,6 +148,94 @@ Each successful run replaces the selected output file, including manual edits
 and checked boxes. Keep your own notes separately. Generated files in `output/`
 are excluded from Git.
 
+### Include PDF and PowerPoint text
+
+Install the optional document readers once in your activated environment, then
+add `--include-files` to an export:
+
+```sh
+python -m pip install -e ".[files]"
+canvas-study --include-files --output output/course-study.md
+canvas-study --include-files --format json --output output/course-context.json
+```
+
+`--include-files` also includes course content. It discovers Canvas files linked
+from retrieved pages, syllabus, modules, activity, and assignment descriptions.
+Files referenced by assignments are included regardless of the planning horizon.
+It does not scan the whole Files library or follow external document links.
+
+PDF text is grouped by page. PowerPoint text, tables, and speaker notes are
+grouped by slide. Each document includes its Canvas source link and extraction
+status. Originals are saved under `output/files/<course-id>/<file-id>.pdf` or
+`.pptx`. Matching downloads are reused after checking Canvas metadata and the
+local file's SHA-256 digest. Text is extracted locally each time, so new extraction
+limits take effect immediately. Canvas credentials are only sent to
+your configured Canvas origin, including when a download redirects to storage.
+
+Defaults apply without editing your existing configuration. To adjust them, add
+this section once to `config.local.toml`:
+
+```toml
+[files]
+download_dir = "output/files"
+max_file_mb = 25
+max_files_per_course = 100
+max_pages = 300
+```
+
+The size limit is in MiB; the course limit counts checked file references,
+including unsupported types. `max_pages` limits pages or slides per document.
+Extracted text is capped at one million characters per document, and PPTX
+contents at 100 MiB after decompression. Reaching a limit produces a warning.
+
+Scanned PDFs need OCR, which is not included. Images, diagrams, equations, and
+reading order may require checking the original. Locked, missing, encrypted,
+unreadable, or oversized files are reported in the export. Legacy `.ppt` files
+must first be converted to PDF or PPTX. The offline `--demo --include-files`
+uses explicitly labeled sample text and needs no optional libraries.
+
+### Track changes and reuse downloads
+
+```sh
+canvas-study --include-files --changes --output output/course-study.md
+```
+
+Run the same command again to compare with the previous successful check. The
+first run creates a baseline. Later exports include **Changes since previous
+check**, showing new assignments, old and new personal deadlines, and updated
+assignment instructions, course pages, syllabus, and file metadata. Deadlines in
+Markdown use your configured timezone. Add `--format json` for structured
+`changes.events` with `kind`, `resource`, source links, and deadline `before`/`after`.
+
+`--changes` also works for assignments alone or with `--include-course-content`.
+Comparison includes all fetched assignments, regardless of due-date and completion
+filters. “New” means first observed, not necessarily newly uploaded. Missing or
+inaccessible resources are not reported as deleted; their last observation is
+retained so a temporary access failure does not make old material appear new.
+
+Snapshots live in ignored `output/.state/`; `--state-dir path` chooses another
+location. Changes are measured since the last successful run **with `--changes`**,
+and the baseline advances only after the export is written. Missing, damaged, or
+incompatible state starts a new baseline. Canvas origins/tokens, course selections,
+and content flags have separate baselines; rotating your token starts a fresh one.
+Markdown and JSON share the same baseline for an otherwise identical scope.
+Demo runs never read or write comparison state.
+
+File caching works whenever `--include-files` is used, even without `--changes`.
+Canvas API requests still check current metadata and permissions. Only changed,
+missing, or locally altered documents are downloaded; files without a usable
+version timestamp are downloaded again. Cache metadata is stored beside each
+original as `.cache.json`, without tokens or signed download URLs. The terminal
+reports how many documents were downloaded and reused. To force fresh downloads:
+
+```sh
+canvas-study --include-files --changes --refresh-files --output output/course-study.md
+```
+
+Run scheduled refreshes sequentially, using the same working directory or absolute
+paths for the state and file directories. Keep state and cached documents private,
+just like the exports.
+
 ### Running without activation
 
 In a new terminal, activate the environment again or replace `canvas-study` in
@@ -197,12 +287,17 @@ With `--include-course-content`, JSON contains `schema_version`, `generated_at`,
 `assignment_filters`, `assignments`, and `courses`. Each course contains its
 metadata, `homepage`, `front_page`, `syllabus`, `pages`, `modules`,
 `activity_stream`, and `warnings`. Rich text includes readable `text`, original
-`html`, and extracted `links`. Without the flag, JSON is an assignment array.
+`html`, and extracted `links`. Without `--include-course-content`, `--include-files`,
+or `--changes`, JSON is an assignment array. `--changes` adds a `changes` object to
+the envelope (with an empty `courses` list for assignment-only checks).
 
 Markdown contains readable text and source links. The homepage type determines
 whether its content comes from a front page, syllabus, modules, assignments, or
-recent activity. Files, videos, and external tools are retained as links or module
-references; their contents are not downloaded or transcribed.
+recent activity. By default, files remain links or module references. With
+`--include-files`, each course also has a `files` array containing document
+metadata, `referenced_by`, `local_path`, `status`, `warnings`, combined `text`, and
+numbered `sections`. Temporary signed download URLs are not added to those
+records. Videos and external tools are not downloaded or transcribed.
 
 Some courses disable the Pages index while individual pages remain accessible.
 The exporter also discovers pages through modules, the syllabus, the homepage,
@@ -248,6 +343,8 @@ separately; installing this project creates no background jobs.
 | HTTP 401 | Check whether your Canvas token is correct and still valid. |
 | HTTP 403/404 for a course or assignment | Check the Canvas origin, course IDs, and account access. |
 | Page index unavailable | Linked pages are still fetched. Read the export's warnings for missing content. |
+| File extraction requires extra libraries | Activate the environment and run `python -m pip install -e ".[files]"`. |
+| File has no extracted text or only partial text | Read its status and warnings. Scans need OCR; check limits under `[files]` and compare with the original. |
 | Unknown timezone | Check the IANA name. On minimal macOS/Linux installations, install timezone data with `python -m pip install tzdata` in the environment. Windows installs it with the project. |
 
 Timezone lookup uses [system data or the Python tzdata package](https://docs.python.org/3/library/zoneinfo.html#data-sources).
@@ -263,7 +360,7 @@ failures receive up to two retries.
 After activating the environment on any platform:
 
 ```sh
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[dev,files]"
 python -m unittest discover -s tests -v
 python -m ruff check .
 python -m ruff format --check .
@@ -279,7 +376,12 @@ calls and require no Canvas credentials.
 | `canvas_agent/client.py` | Read Canvas resources, handle pagination and HTTP failures. |
 | `canvas_agent/planner.py` | Filter assignments and render the study plan. |
 | `canvas_agent/content.py` | Normalize course text and render source-linked sections. |
-| `canvas_agent/discovery.py` | Discover same-course page links. |
+| `canvas_agent/discovery.py` | Discover Canvas page and file references. |
+| `canvas_agent/files.py` | Resolve referenced files and coordinate bounded downloads. |
+| `canvas_agent/cache.py` | Validate local downloads against current metadata and file hashes. |
+| `canvas_agent/changes.py` | Compare observed assignments, pages, and documents. |
+| `canvas_agent/storage.py` | Atomically write exports, snapshots, and cache metadata. |
+| `canvas_agent/extraction.py` | Extract numbered PDF pages and PPTX slides and notes. |
 | `canvas_agent/cli.py` | Coordinate exports and replace output files atomically. |
 | `tests/` | Configuration, HTTP, discovery, rendering, and CLI regression tests. |
 
@@ -297,4 +399,5 @@ non-obvious behavior and assumptions in comments; avoid repeating the code.
 [Assignments](https://developerdocs.instructure.com/services/canvas/resources/assignments) ·
 [Courses](https://developerdocs.instructure.com/services/canvas/resources/courses) ·
 [Pages](https://developerdocs.instructure.com/services/canvas/resources/pages) ·
-[Modules](https://developerdocs.instructure.com/services/canvas/resources/modules)
+[Modules](https://developerdocs.instructure.com/services/canvas/resources/modules) ·
+[Files](https://developerdocs.instructure.com/services/canvas/resources/files)
