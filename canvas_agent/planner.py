@@ -65,7 +65,8 @@ def plain_text(value: str) -> str:
     return " ".join("".join(parser.parts).split())
 
 
-def _due_date(item: JsonObject, submission: JsonObject) -> datetime | None:
+def assignment_due_date(item: JsonObject, submission: JsonObject) -> datetime | None:
+    """Resolve personal due dates, preserving an explicitly removed deadline."""
     # An explicit null personal due date means no deadline; do not fall back.
     raw = (
         submission["cached_due_date"]
@@ -130,7 +131,7 @@ def prepare(
         )
         if completed and not include_completed:
             continue
-        due = _due_date(item, submission)
+        due = assignment_due_date(item, submission)
         if due and due.astimezone(zone).date() > last_date:
             continue
         result.append(

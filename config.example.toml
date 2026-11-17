@@ -11,6 +11,14 @@ timezone = "Europe/Stockholm"
 days_ahead = 14
 include_completed = false
 
+# Used when running with --include-files (requires pip install -e ".[files]").
+[files]
+download_dir = "output/files"
+max_file_mb = 25
+max_files_per_course = 100
+# Maximum PDF pages or PowerPoint slides per file.
+max_pages = 300
+
 [style]
 title = "My study plan"
 # Fields: checkbox, name, course, due, status, points, url, description.

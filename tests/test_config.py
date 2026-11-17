@@ -22,6 +22,19 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(settings.zone.key, "Europe/Stockholm")
         self.assertEqual(settings.course_ids, ())
         self.assertFalse(settings.include_completed)
+        self.assertEqual(settings.files.download_dir, Path("output/files"))
+        self.assertEqual(settings.files.max_file_mb, 25)
+
+    def test_file_settings_override_defaults(self):
+        self.write_config(
+            '[files]\ndownload_dir="output/documents"\nmax_file_mb=5\n'
+            "max_files_per_course=10\nmax_pages=20\n"
+        )
+        settings = load_settings(self.path, environ={}).files
+        self.assertEqual(settings.download_dir, Path("output/documents"))
+        self.assertEqual(settings.max_file_mb, 5)
+        self.assertEqual(settings.max_files_per_course, 10)
+        self.assertEqual(settings.max_pages, 20)
 
     def test_live_run_requires_a_config_file(self):
         with self.assertRaisesRegex(ConfigError, "Copy config.example.toml"):
@@ -57,6 +70,13 @@ class ConfigTests(unittest.TestCase):
             ('[study]\ninclude_completed="yes"', "must be true or false"),
             ("[study]\ntimezone=42", "IANA timezone string"),
             ("[style]\ntitle=42", "must be strings"),
+            ("files=5", "files must be a TOML table"),
+            ("[files]\nmax_file_mb=0", "positive integer"),
+            ("[files]\nmax_file_mb=true", "positive integer"),
+            ("[files]\nmax_files_per_course=-1", "positive integer"),
+            ("[files]\nmax_pages=1.5", "positive integer"),
+            ('[files]\ndownload_dir=" "', "nonempty path string"),
+            ("[files]\ndownload_dir=42", "nonempty path string"),
         ]
         for content, message in cases:
             with self.subTest(content=content):

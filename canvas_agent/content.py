@@ -284,6 +284,49 @@ def _page_lines(page: JsonObject) -> list[str]:
     return lines
 
 
+def _file_lines(files: Sequence[JsonObject]) -> list[str]:
+    lines = ["#### Course files", ""]
+    if not files:
+        lines.extend(
+            ["No Canvas file references were found in the exported course content.", ""]
+        )
+    for file in files:
+        lines.extend(
+            [
+                f"##### {escape_markdown(file['name'])}",
+                "",
+                _link("Source file", file["url"]),
+                "",
+                f"Extraction status: {escape_markdown(file['status'])}.",
+                "",
+            ]
+        )
+        if file["message"]:
+            lines.extend([escape_markdown(file["message"]), ""])
+        if file["local_path"]:
+            lines.extend(
+                [f"Downloaded copy: {escape_markdown(file['local_path'])}", ""]
+            )
+        for warning in file["warnings"]:
+            lines.extend([escape_markdown(warning), ""])
+        for section in file["sections"]:
+            lines.extend(
+                [f"###### {file['section_kind'].title()} {section['number']}", ""]
+            )
+            lines.extend(
+                escape_markdown(line) if line else ""
+                for line in section["text"].splitlines()
+            )
+            if section["notes"]:
+                lines.extend(["", "Speaker notes:", ""])
+                lines.extend(
+                    escape_markdown(line) if line else ""
+                    for line in section["notes"].splitlines()
+                )
+            lines.append("")
+    return lines
+
+
 def render_course_content(courses: Sequence[JsonObject]) -> str:
     """Render normalized context as Markdown suitable for appending to a plan."""
     lines = ["## Course context", ""]
@@ -316,6 +359,8 @@ def render_course_content(courses: Sequence[JsonObject]) -> str:
         lines.extend(["#### Syllabus", "", *_body_lines(course["syllabus"])])
         for page in course["pages"]:
             lines.extend(_page_lines(page))
+        if "files" in course:
+            lines.extend(_file_lines(course["files"]))
         lines.extend(["#### Modules", ""])
         if not course["modules"]:
             lines.extend(["No modules were returned by Canvas.", ""])

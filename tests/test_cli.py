@@ -14,6 +14,78 @@ from canvas_agent.content import demo_course_content
 
 
 class CliTests(unittest.TestCase):
+    def test_file_demo_includes_courses_without_network_or_extractors(self):
+        config = Path(__file__).resolve().parents[1] / "config.example.toml"
+        with (
+            patch("canvas_agent.cli.CanvasClient") as client,
+            patch("canvas_agent.cli.require_extractors") as require,
+            redirect_stdout(io.StringIO()) as output,
+        ):
+            code = main(
+                [
+                    "--demo",
+                    "--config",
+                    str(config),
+                    "--include-files",
+                    "--format",
+                    "json",
+                ]
+            )
+        self.assertEqual(code, 0)
+        data = json.loads(output.getvalue())
+        record = data["courses"][0]["files"][0]
+        self.assertEqual(record["status"], "demo")
+        self.assertIn("Sample text only", record["message"])
+        self.assertIn("Practice matrix", record["text"])
+        client.assert_not_called()
+        require.assert_not_called()
+
+    def test_file_export_automatically_fetches_course_context(self):
+        config = Path(__file__).resolve().parents[1] / "config.example.toml"
+        with (
+            patch("canvas_agent.cli.CanvasClient") as factory,
+            patch("canvas_agent.cli.require_extractors"),
+            patch("canvas_agent.cli.add_file_content") as add_files,
+            redirect_stdout(io.StringIO()) as output,
+        ):
+            client = factory.return_value
+            client.base_url = "https://school.example"
+            client.course_content.return_value = demo_course_content()
+            client.assignments.return_value = []
+            code = main(
+                ["--config", str(config), "--include-files", "--format", "json"]
+            )
+        self.assertEqual(code, 0)
+        self.assertIn("courses", json.loads(output.getvalue()))
+        client.course_content.assert_called_once()
+        client.assignments.assert_called_once_with([101])
+        add_files.assert_called_once()
+        self.assertIs(add_files.call_args.args[0], client)
+
+    def test_missing_file_dependencies_fail_before_network_and_preserve_output(self):
+        config = Path(__file__).resolve().parents[1] / "config.example.toml"
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "course.md"
+            output.write_text("previous export", encoding="utf-8")
+            with (
+                patch("canvas_agent.cli.CanvasClient") as client,
+                patch("canvas_agent.extraction.find_spec", return_value=None),
+                redirect_stderr(io.StringIO()) as error,
+            ):
+                code = main(
+                    [
+                        "--config",
+                        str(config),
+                        "--include-files",
+                        "--output",
+                        str(output),
+                    ]
+                )
+            self.assertEqual(code, 1)
+            self.assertIn('pip install -e ".[files]"', error.getvalue())
+            client.assert_not_called()
+            self.assertEqual(output.read_text(encoding="utf-8"), "previous export")
+
     def test_course_demo_json_has_context_and_assignment_metadata(self):
         config = Path(__file__).resolve().parents[1] / "config.example.toml"
         with (
@@ -178,7 +250,7 @@ class CliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "plan.md"
             output.write_text("previous plan", encoding="utf-8")
-            with patch("canvas_agent.cli.os.replace", side_effect=PermissionError):
+            with patch("canvas_agent.storage.os.replace", side_effect=PermissionError):
                 with self.assertRaises(PermissionError):
                     write_output(output, "new plan")
             self.assertEqual(output.read_text(encoding="utf-8"), "previous plan")
